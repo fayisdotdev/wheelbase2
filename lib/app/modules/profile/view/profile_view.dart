@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:wheelbase/app/modules/auth/controller/auth_controller.dart';
 import '../controller/profile_controller.dart';
 import '../../../widgets/app_loader.dart';
-import '../../../widgets/app_appbar.dart';
 
 class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find();
+    final authController = Get.find<AuthController>();
     return Scaffold(
-      appBar: const AppAppBar(title: 'Profile'),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              authController.logout();
+            },
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
       body: Obx(() {
         if (controller.loading.value) {
           return const Center(child: AppLoader());

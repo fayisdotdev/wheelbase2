@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:wheelbase/app/modules/vehicle/controller/vehicle_controller.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../../data/models/user_profile_model.dart';
@@ -56,6 +57,11 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     await _authService.logout();
     userProfile.value = null;
+    // Also clear vehicles on logout
+    try {
+      final vehicleController = Get.find<VehicleController>();
+      vehicleController.vehicles.clear();
+    } catch (_) {}
     Get.offAllNamed(AppRoutes.login);
   }
 }

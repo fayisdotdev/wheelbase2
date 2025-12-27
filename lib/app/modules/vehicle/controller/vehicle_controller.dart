@@ -16,6 +16,7 @@ class VehicleController extends GetxController {
       vehicles.value = await _vehicleService.fetchVehicles(userAuthUuid);
     } catch (e) {
       error.value = e.toString();
+      vehicles.clear();
     } finally {
       loading.value = false;
     }
