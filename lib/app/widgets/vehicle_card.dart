@@ -21,14 +21,29 @@ class VehicleCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: ListTile(
         onTap: onTap,
-        leading: vehicle.imageUrl != null && vehicle.imageUrl!.isNotEmpty
-            ? Image.network(
-                vehicle.imageUrl!,
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-              )
-            : const Icon(Icons.directions_car, size: 40),
+        leading: ClipRRect(
+  borderRadius: BorderRadius.circular(8),
+  child: vehicle.imageUrl != null && vehicle.imageUrl!.isNotEmpty
+      ? Image.network(
+          vehicle.imageUrl!,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            width: 56,
+            height: 56,
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.directions_car),
+          ),
+        )
+      : Container(
+          width: 56,
+          height: 56,
+          color: Colors.grey.shade300,
+          child: const Icon(Icons.directions_car),
+        ),
+),
+
         title: Text(vehicle.vehicleName),
         subtitle: Text(vehicle.vehicleNumber),
         trailing: Row(

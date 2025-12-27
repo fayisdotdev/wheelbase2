@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controller/vehicle_controller.dart';
-import 'widgets/vehicle_form.dart';
-import '../../../widgets/app_appbar.dart';
-import '../../../data/models/vehicle_model.dart';
+import 'package:wheelbase/app/data/models/vehicle_model.dart';
+import 'package:wheelbase/app/modules/vehicle/controller/vehicle_controller.dart';
+import 'package:wheelbase/app/modules/vehicle/view/widgets/vehicle_form.dart';
+import 'package:wheelbase/app/widgets/app_appbar.dart';
+
 
 class EditVehicleView extends StatelessWidget {
+  const EditVehicleView({super.key});
+
   @override
   Widget build(BuildContext context) {
     final VehicleController controller = Get.find();

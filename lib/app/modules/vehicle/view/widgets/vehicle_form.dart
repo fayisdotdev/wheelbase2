@@ -27,52 +27,49 @@ class VehicleForm extends StatefulWidget {
 
 class _VehicleFormState extends State<VehicleForm> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController nameController;
-  late TextEditingController numberController;
-  late TextEditingController yearController;
-  late TextEditingController serviceKmController;
-  late TextEditingController batteryController;
-  late TextEditingController alignmentController;
-  late TextEditingController notesController;
+
+  late final TextEditingController nameController;
+  late final TextEditingController numberController;
+  late final TextEditingController yearController;
+  late final TextEditingController serviceKmController;
+  late final TextEditingController batteryController;
+  late final TextEditingController alignmentController;
+  late final TextEditingController notesController;
+
   DateTime? insuranceStart;
   DateTime? insuranceEnd;
   DateTime? pollutionStart;
   DateTime? pollutionEnd;
   bool needNotification = false;
   bool sharedWith = false;
+
   File? imageFile;
   String? existingImageUrl;
+
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    nameController = TextEditingController(
-      text: widget.vehicle?.vehicleName ?? '',
-    );
-    numberController = TextEditingController(
-      text: widget.vehicle?.vehicleNumber ?? '',
-    );
-    yearController = TextEditingController(
-      text: widget.vehicle?.vehicleYear ?? '',
-    );
-    serviceKmController = TextEditingController(
-      text: widget.vehicle?.serviceKm ?? '',
-    );
-    batteryController = TextEditingController(
-      text: widget.vehicle?.battery ?? '',
-    );
-    alignmentController = TextEditingController(
-      text: widget.vehicle?.alignment ?? '',
-    );
-    notesController = TextEditingController(text: widget.vehicle?.notes ?? '');
-    insuranceStart = widget.vehicle?.insuranceStarts;
-    insuranceEnd = widget.vehicle?.insuranceEnds;
-    pollutionStart = widget.vehicle?.pollutionStarts;
-    pollutionEnd = widget.vehicle?.pollutionEnds;
-    needNotification = widget.vehicle?.needNotification ?? false;
-    sharedWith = widget.vehicle?.sharedWith ?? false;
-    existingImageUrl = widget.vehicle?.imageUrl;
+
+    final v = widget.vehicle;
+
+    nameController = TextEditingController(text: v?.vehicleName ?? '');
+    numberController = TextEditingController(text: v?.vehicleNumber ?? '');
+    yearController = TextEditingController(text: v?.vehicleYear ?? '');
+    serviceKmController = TextEditingController(text: v?.serviceKm ?? '');
+    batteryController = TextEditingController(text: v?.battery ?? '');
+    alignmentController = TextEditingController(text: v?.alignment ?? '');
+    notesController = TextEditingController(text: v?.notes ?? '');
+
+    insuranceStart = v?.insuranceStarts;
+    insuranceEnd = v?.insuranceEnds;
+    pollutionStart = v?.pollutionStarts;
+    pollutionEnd = v?.pollutionEnds;
+    needNotification = v?.needNotification ?? false;
+    sharedWith = v?.sharedWith ?? false;
+
+    existingImageUrl = v?.imageUrl;
   }
 
   @override
@@ -89,72 +86,76 @@ class _VehicleFormState extends State<VehicleForm> {
 
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (!mounted) return;
+
     if (picked != null) {
       setState(() {
         imageFile = File(picked.path);
-        existingImageUrl = null;
+        existingImageUrl = null; // override previous
       });
     }
   }
 
-  void _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    AuthController? authController;
-    try {
-      authController = Get.find<AuthController>();
-    } catch (e) {
-      debugPrint('AuthController not found: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('AuthController not found.')),
-      );
-      return;
-    }
-    final user = authController.userProfile.value;
-    debugPrint('User profile in VehicleForm: $user');
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in (profile is null)')),
-      );
-      return;
-    }
-
-    // TODO: Upload image to storage and get URL if imageFile != null
-    String? imageUrl = existingImageUrl;
-    // You may want to call a VehicleController method to upload and get the URL
-    // For now, just ignore image upload logic
-
-    final vehicle = Vehicle(
-      vehicleId: widget.vehicle?.vehicleId ?? UniqueKey().toString(),
-      ownerName: user.name,
-      vehicleName: nameController.text,
-      vehicleNumber: numberController.text,
-      vehicleYear: yearController.text,
-      createdAt: widget.vehicle?.createdAt ?? DateTime.now(),
-      uploadedAt: null,
-      insuranceStarts: insuranceStart,
-      insuranceEnds: insuranceEnd,
-      pollutionStarts: pollutionStart,
-      pollutionEnds: pollutionEnd,
-      battery: batteryController.text,
-      alignment: alignmentController.text,
-      serviceKm: serviceKmController.text,
-      notes: notesController.text,
-      needNotification: needNotification,
-      sharedWith: sharedWith,
-      imageUrl: imageUrl ?? '',
-      userAuthUuid: user.authUuid,
-      vehicleAddedBy: user.email,
-    );
-    widget.onSubmit(vehicle);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          widget.vehicle == null ? 'Vehicle added!' : 'Vehicle updated!',
-        ),
-      ),
-    );
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
+
+void _submit() {
+  if (widget.loading) return;
+
+  if (!(_formKey.currentState?.validate() ?? false)) {
+    _showSnack("Please fill required fields.");
+    return;
+  }
+
+  late AuthController authController;
+  try {
+    authController = Get.find<AuthController>();
+    print("VehicleForm: AuthController found: $authController");
+  } catch (e) {
+    _showSnack("AuthController not found: $e");
+    print("VehicleForm: AuthController not found: $e");
+    return;
+  }
+
+  final user = authController.userProfile.value;
+  print("VehicleForm: User profile from AuthController: $user");
+
+  if (user == null) {
+    _showSnack("User profile is null. Ensure user is fetched before opening this page.");
+    return;
+  }
+
+  final vehicle = Vehicle(
+    vehicleId: widget.vehicle?.vehicleId ??
+        DateTime.now().millisecondsSinceEpoch.toString(),
+    ownerName: user.name,
+    vehicleName: nameController.text.trim(),
+    vehicleNumber: numberController.text.trim(),
+    vehicleYear: yearController.text.trim(),
+    createdAt: widget.vehicle?.createdAt ?? DateTime.now(),
+    uploadedAt: DateTime.now(),
+    insuranceStarts: insuranceStart,
+    insuranceEnds: insuranceEnd,
+    pollutionStarts: pollutionStart,
+    pollutionEnds: pollutionEnd,
+    battery: batteryController.text.trim(),
+    alignment: alignmentController.text.trim(),
+    serviceKm: serviceKmController.text.trim(),
+    notes: notesController.text.trim(),
+    needNotification: needNotification,
+    sharedWith: sharedWith,
+    imageUrl: existingImageUrl ?? '',
+    userAuthUuid: user.authUuid,
+    vehicleAddedBy: user.email,
+  );
+
+  print("VehicleForm: Submitting vehicle: ${vehicle.vehicleName}");
+  widget.onSubmit(vehicle);
+  _showSnack(widget.vehicle == null ? "Vehicle added!" : "Vehicle updated!");
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -164,134 +165,141 @@ class _VehicleFormState extends State<VehicleForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image section
+            // IMAGE
             Center(
               child: Stack(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: imageFile != null
-                        ? Image.file(
-                            imageFile!,
-                            height: 150,
-                            width: 150,
-                            fit: BoxFit.cover,
-                          )
-                        : (existingImageUrl != null &&
-                              existingImageUrl!.isNotEmpty)
-                        ? Image.network(
-                            existingImageUrl!,
-                            height: 150,
-                            width: 150,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 150,
-                                width: 150,
-                                color: Colors.grey.shade300,
-                                child: const Icon(Icons.broken_image, size: 40),
-                              );
-                            },
-                          )
-                        : Container(
-                            height: 150,
-                            width: 150,
-                            color: Colors.grey.shade300,
-                            child: const Icon(Icons.directions_car, size: 50),
-                          ),
+                    child: _buildImage(),
                   ),
                   Positioned(
                     bottom: 8,
                     right: 8,
                     child: FloatingActionButton.small(
-                      heroTag: 'pickImage',
+                      heroTag: "pickImageFab",
                       onPressed: _pickImage,
                       child: const Icon(Icons.camera_alt),
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
             const SizedBox(height: 16),
+
             AppInput(
               controller: nameController,
               label: 'Vehicle Name',
               validator: Validators.notEmpty,
             ),
             const SizedBox(height: 12),
+
             AppInput(
               controller: numberController,
               label: 'Vehicle Number',
               validator: Validators.notEmpty,
             ),
             const SizedBox(height: 12),
+
             AppInput(
               controller: yearController,
               label: 'Vehicle Year',
               validator: Validators.notEmpty,
             ),
             const SizedBox(height: 12),
+
             AppInput(
               controller: serviceKmController,
               label: 'Service KM',
               validator: Validators.number,
             ),
             const SizedBox(height: 12),
-            AppInput(
-              controller: batteryController,
-              label: 'Battery (Optional)',
-            ),
+
+            AppInput(controller: batteryController, label: "Battery (Optional)"),
             const SizedBox(height: 12),
-            AppInput(
-              controller: alignmentController,
-              label: 'Alignment (Optional)',
-            ),
+
+            AppInput(controller: alignmentController, label: "Alignment (Optional)"),
             const SizedBox(height: 12),
-            AppInput(controller: notesController, label: 'Notes (Optional)'),
+
+            AppInput(controller: notesController, label: "Notes (Optional)"),
             const SizedBox(height: 12),
+
             DatePicker(
-              label: 'Insurance Start',
+              label: "Insurance Start",
               initialDate: insuranceStart,
-              onDateSelected: (date) => setState(() => insuranceStart = date),
+              onDateSelected: (d) => setState(() => insuranceStart = d),
             ),
             const SizedBox(height: 12),
+
             DatePicker(
-              label: 'Insurance End',
+              label: "Insurance End",
               initialDate: insuranceEnd,
-              onDateSelected: (date) => setState(() => insuranceEnd = date),
+              onDateSelected: (d) => setState(() => insuranceEnd = d),
             ),
             const SizedBox(height: 12),
+
             DatePicker(
-              label: 'Pollution Start',
+              label: "Pollution Start",
               initialDate: pollutionStart,
-              onDateSelected: (date) => setState(() => pollutionStart = date),
+              onDateSelected: (d) => setState(() => pollutionStart = d),
             ),
             const SizedBox(height: 12),
+
             DatePicker(
-              label: 'Pollution End',
+              label: "Pollution End",
               initialDate: pollutionEnd,
-              onDateSelected: (date) => setState(() => pollutionEnd = date),
+              onDateSelected: (d) => setState(() => pollutionEnd = d),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+
             SwitchListTile(
-              title: const Text('Need Notifications'),
+              title: const Text("Need Notifications"),
               value: needNotification,
-              onChanged: (val) => setState(() => needNotification = val),
+              onChanged: (v) => setState(() => needNotification = v),
             ),
             SwitchListTile(
-              title: const Text('Shared With Others'),
+              title: const Text("Shared With Others"),
               value: sharedWith,
-              onChanged: (val) => setState(() => sharedWith = val),
+              onChanged: (v) => setState(() => sharedWith = v),
             ),
+
             const SizedBox(height: 24),
+
             AppButton(
-              label: widget.vehicle == null ? 'Add Vehicle' : 'Update Vehicle',
-              onPressed: widget.loading ? null : _submit,
+              label: widget.vehicle == null ? "Add Vehicle" : "Update Vehicle",
               loading: widget.loading,
+              onPressed: widget.loading ? null : _submit,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildImage() {
+    if (imageFile != null) {
+      return Image.file(imageFile!, height: 150, width: 150, fit: BoxFit.cover);
+    }
+
+    if (existingImageUrl != null && existingImageUrl!.isNotEmpty) {
+      return Image.network(
+        existingImageUrl!,
+        height: 150,
+        width: 150,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+      );
+    }
+
+    return _imagePlaceholder();
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      height: 150,
+      width: 150,
+      color: Colors.grey.shade300,
+      child: const Icon(Icons.directions_car, size: 50),
     );
   }
 }

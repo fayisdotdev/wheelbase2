@@ -1,25 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wheelbase/app/modules/auth/controller/auth_controller.dart';
-import '../controller/vehicle_controller.dart';
-import '../../../widgets/vehicle_card.dart';
-import '../../../widgets/app_loader.dart';
-import '../../../widgets/app_appbar.dart';
-import '../../../routes/app_routes.dart';
+import 'package:wheelbase/app/modules/vehicle/controller/vehicle_controller.dart';
+import 'package:wheelbase/app/routes/app_routes.dart';
+import 'package:wheelbase/app/widgets/app_loader.dart';
+import 'package:wheelbase/app/widgets/vehicle_card.dart';
+
 
 class VehicleListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VehicleController vehicleController = Get.find();
-    final authController = Get.find<AuthController>();
-
-    // Fetch vehicles if not already loaded
-    if (vehicleController.vehicles.isEmpty &&
-        authController.userProfile.value != null) {
-      vehicleController.fetchVehicles(
-        authController.userProfile.value!.authUuid,
-      );
-    }
+    final AuthController authController = Get.find<AuthController>();
 
     return Scaffold(
       appBar: AppBar(
@@ -27,20 +19,36 @@ class VehicleListView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              authController.logout();
-            },
+            onPressed: () => authController.logout(),
             tooltip: 'Logout',
           ),
         ],
       ),
       body: Obx(() {
+        // Wait for user profile
+        if (authController.loading.value) {
+          return const Center(child: AppLoader());
+        }
+
+        final user = authController.userProfile.value;
+        if (user == null) {
+          return const Center(child: Text('User not logged in'));
+        }
+
+        // Fetch vehicles if not loaded
+        if (!vehicleController.loading.value &&
+            vehicleController.vehicles.isEmpty) {
+          vehicleController.fetchVehicles(user.authUuid);
+        }
+
         if (vehicleController.loading.value) {
           return const Center(child: AppLoader());
         }
+
         if (vehicleController.vehicles.isEmpty) {
           return const Center(child: Text('No vehicles found'));
         }
+
         return ListView.builder(
           itemCount: vehicleController.vehicles.length,
           itemBuilder: (context, index) {
@@ -58,7 +66,13 @@ class VehicleListView extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Get.toNamed(AppRoutes.addVehicle),
+        onPressed: () {
+          if (authController.userProfile.value != null) {
+            Get.toNamed(AppRoutes.addVehicle);
+          } else {
+            Get.snackbar('Error', 'User profile not loaded yet');
+          }
+        },
         child: const Icon(Icons.add),
       ),
     );
