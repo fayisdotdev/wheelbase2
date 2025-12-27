@@ -1,0 +1,15 @@
+import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class SupabaseService extends GetxService {
+  static const String supabaseUrl = "https://djwptkgaqdvotprtaobg.supabase.co";
+  static const String supabaseAnonKey =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqd3B0a2dhcWR2b3RwcnRhb2JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNTkwNDUsImV4cCI6MjA3MjgzNTA0NX0.wTwN-isaYUajlhQFwoVRa34iJT0armZqy2-69shro80";
+
+  Future<SupabaseService> init() async {
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    return this;
+  }
+
+  SupabaseClient get client => Supabase.instance.client;
+}
