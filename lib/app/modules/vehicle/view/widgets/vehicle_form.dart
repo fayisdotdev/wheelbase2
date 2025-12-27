@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
-import '../../../../data/models/vehicle_model.dart';
-import '../../../../widgets/app_input.dart';
-import '../../../../widgets/app_button.dart';
-import '../../../../widgets/date_picker.dart';
-import '../../../../utils/validators.dart';
-import '../../../auth/controller/auth_controller.dart';
+import 'package:wheelbase/app/data/models/vehicle_model.dart';
+import 'package:wheelbase/app/modules/auth/controller/auth_controller.dart';
+import 'package:wheelbase/app/modules/vehicle/controller/vehicle_controller.dart';
+import 'package:wheelbase/app/utils/validators.dart';
+import 'package:wheelbase/app/widgets/app_button.dart';
+import 'package:wheelbase/app/widgets/app_input.dart';
+import 'package:wheelbase/app/widgets/date_picker.dart';
+
 
 class VehicleForm extends StatefulWidget {
   final Vehicle? vehicle;
@@ -101,7 +103,7 @@ class _VehicleFormState extends State<VehicleForm> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-void _submit() {
+Future<void> _submit() async {
   if (widget.loading) return;
 
   if (!(_formKey.currentState?.validate() ?? false)) {
@@ -109,27 +111,26 @@ void _submit() {
     return;
   }
 
-  late AuthController authController;
-  try {
-    authController = Get.find<AuthController>();
-    print("VehicleForm: AuthController found: $authController");
-  } catch (e) {
-    _showSnack("AuthController not found: $e");
-    print("VehicleForm: AuthController not found: $e");
-    return;
-  }
-
+  final authController = Get.find<AuthController>();
   final user = authController.userProfile.value;
-  print("VehicleForm: User profile from AuthController: $user");
 
   if (user == null) {
     _showSnack("User profile is null. Ensure user is fetched before opening this page.");
     return;
   }
 
+  final vehicleController = Get.find<VehicleController>();
+
+  String? uploadedImageUrl = existingImageUrl;
+
+  if (imageFile != null) {
+    uploadedImageUrl = await vehicleController.pickAndUploadImage(
+      widget.vehicle?.vehicleId
+    );
+  }
+
   final vehicle = Vehicle(
-    vehicleId: widget.vehicle?.vehicleId ??
-        DateTime.now().millisecondsSinceEpoch.toString(),
+    vehicleId: widget.vehicle?.vehicleId ?? DateTime.now().millisecondsSinceEpoch.toString(),
     ownerName: user.name,
     vehicleName: nameController.text.trim(),
     vehicleNumber: numberController.text.trim(),
@@ -146,15 +147,22 @@ void _submit() {
     notes: notesController.text.trim(),
     needNotification: needNotification,
     sharedWith: sharedWith,
-    imageUrl: existingImageUrl ?? '',
+    imageUrl: uploadedImageUrl, // use the new uploaded URL
     userAuthUuid: user.authUuid,
     vehicleAddedBy: user.email,
   );
 
-  print("VehicleForm: Submitting vehicle: ${vehicle.vehicleName}");
-  widget.onSubmit(vehicle);
-  _showSnack(widget.vehicle == null ? "Vehicle added!" : "Vehicle updated!");
+  if (widget.vehicle == null) {
+    await vehicleController.addVehicle(vehicle);
+    _showSnack("Vehicle added!");
+  } else {
+    await vehicleController.updateVehicle(vehicle);
+    _showSnack("Vehicle updated!");
+  }
+
+  Get.back();
 }
+
 
 
   @override

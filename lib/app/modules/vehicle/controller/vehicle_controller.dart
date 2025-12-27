@@ -59,17 +59,21 @@ class VehicleController extends GetxController {
     }
   }
 
-  Future<String?> pickAndUploadImage(String fileName) async {
-    loading.value = true;
-    try {
-      final file = await _imageService.pickImage();
-      if (file == null) return null;
-      return await _imageService.uploadImage(file, fileName);
-    } catch (e) {
-      error.value = e.toString();
-      return null;
-    } finally {
-      loading.value = false;
-    }
+Future<String?> pickAndUploadImage(String? existingFileName) async {
+  loading.value = true;
+  try {
+    final file = await _imageService.pickImage();
+    if (file == null) return null;
+
+    final fileName = existingFileName ?? "${DateTime.now().millisecondsSinceEpoch}.jpg";
+    final uploadedUrl = await _imageService.uploadImage(file, fileName);
+    return uploadedUrl;
+  } catch (e) {
+    error.value = e.toString();
+    return null;
+  } finally {
+    loading.value = false;
   }
+}
+
 }

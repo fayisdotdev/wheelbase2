@@ -1,5 +1,3 @@
-import 'package:meta/meta.dart';
-
 class Vehicle {
   final String vehicleId;
   final String ownerName;
